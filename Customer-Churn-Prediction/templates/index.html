@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Churn Prediction</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      background: linear-gradient(135deg, #f5e942 0%, #42a5f5 100%);
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Enhanced Grid Background with Churn Icons */
+    .grid-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.15;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.1) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(0,0,0,0.1) 2px, transparent 2px),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cpath d='M30,15 L70,15 L85,50 L70,85 L30,85 L15,50 Z' fill='none' stroke='%2342a5f5' stroke-width='1'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23f5e942' stroke-width='1'/%3E%3C/svg%3E");
+      background-size: 80px 80px, 80px 80px, 40px 40px, 40px 40px;
+      animation: gridMove 25s linear infinite;
+    }
+
+    .grid-background::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M10,10 L50,10 L60,30 L50,50 L10,50 L0,30 Z' fill='none' stroke='%2342a5f5' stroke-width='0.5'/%3E%3C/svg%3E"),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cpath d='M5,5 L35,5 L40,20 L35,35 L5,35 L0,20 Z' fill='none' stroke='%23f5e942' stroke-width='0.5'/%3E%3C/svg%3E");
+      background-size: 60px 60px, 40px 40px;
+      animation: gridMove 30s linear infinite reverse;
+    }
+
+    @keyframes gridMove {
+      0% {
+        transform: translate(0, 0);
+      }
+      100% {
+        transform: translate(80px, 80px);
+      }
+    }
+
+    /* Floating churn-related icons */
+    .particle {
+      position: absolute;
+      background-size: contain;
+      background-repeat: no-repeat;
+      animation: float 6s ease-in-out infinite;
+      opacity: 0.2;
+    }
+
+    .particle-1 {
+      width: 30px;
+      height: 30px;
+      top: 20%;
+      left: 10%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2342a5f5'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.59-12.42L10 14.17l-2.59-2.58L6 13l4 4 8-8z'/%3E%3C/svg%3E");
+      animation-delay: 0s;
+    }
+
+    .particle-2 {
+      width: 25px;
+      height: 25px;
+      top: 60%;
+      left: 85%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f5e942'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
+      animation-delay: 2s;
+    }
+
+    .particle-3 {
+      width: 35px;
+      height: 35px;
+      top: 80%;
+      left: 20%;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2342a5f5'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z'/%3E%3C/svg%3E");
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+      }
+      50% {
+        transform: translateY(-20px) rotate(180deg);
+      }
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background: #87CEEB; /* Fixed sky blue color */
+      padding: 40px 45px;
+      border-radius: 25px;
+      box-shadow:
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+      animation: slideInScale 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transform: translateY(50px) scale(0.9);
+      opacity: 0;
+      position: relative;
+      z-index: 1;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg,
+        #f5e942, #42a5f5, #42a5f5, #f5e942);
+      background-size: 400% 400%;
+      border-radius: 27px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      animation: gradientBorderMove 8s ease infinite;
+    }
+
+    .container:hover::before {
+      opacity: 0.7;
+    }
+
+    .container:hover {
+      transform: translateY(-5px);
+      box-shadow:
+        0 35px 70px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    @keyframes gradientBorderMove {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes slideInScale {
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 35px;
+      position: relative;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      letter-spacing: -0.5px;
+    }
+
+    h2::after {
+      content: "";
+      display: block;
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(90deg, #f5e942, #42a5f5);
+      margin: 15px auto 0;
+      border-radius: 5px;
+      animation: gradientShift 3s ease-in-out infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% {
+        background: linear-gradient(90deg, #f5e942, #42a5f5);
+      }
+      50% {
+        background: linear-gradient(90deg, #42a5f5, #f5e942);
+      }
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+      font-weight: 800;
+      color: #333;
+      font-size: 18px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      letter-spacing: 0.5px;
+      padding-left: 8px;
+      position: relative;
+    }
+
+    label::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 2px;
+      width: 4px;
+      height: 70%;
+      background: linear-gradient(to bottom, #42a5f5, #f5e942);
+      border-radius: 2px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 16px 20px;
+      border: none;
+      border-radius: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 16px;
+      height: 56px;
+      color: #333;
+      font-weight: 600;
+      box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.1),
+        inset 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 2px solid rgba(66, 165, 245, 0.3);
+      position: relative;
+    }
+
+    input:hover, select:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: translateY(-2px);
+      box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 0 0 3px rgba(245, 233, 66, 0.2);
+      border-color: rgba(66, 165, 245, 0.6);
+    }
+
+    input:focus, select:focus {
+      background: rgba(255, 255, 255, 1);
+      box-shadow:
+        0 0 0 4px rgba(245, 233, 66, 0.3),
+        0 8px 25px rgba(0, 0, 0, 0.15);
+      outline: none;
+      transform: translateY(-2px);
+      border-color: #42a5f5;
+    }
+
+    /* Custom select arrow */
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2342a5f5' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 12px center;
+      background-repeat: no-repeat;
+      background-size: 16px;
+      padding-right: 45px;
+    }
+
+    option {
+      font-size: 16px;
+      padding: 12px;
+      background: #fff;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .predict-button {
+      margin-top: 40px;
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #f5e942 0%, #42a5f5 100%);
+      border: none;
+      border-radius: 15px;
+      color: #333;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow:
+        0 8px 25px rgba(66, 165, 245, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .predict-button::before {
+      content: "";
+      position: absolute;
+      left: -100%;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transition: 0.6s ease;
+    }
+
+    .predict-button:hover::before {
+      left: 100%;
+    }
+
+    .predict-button:hover {
+      box-shadow:
+        0 15px 35px rgba(66, 165, 245, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.2);
+      background: linear-gradient(135deg, #42a5f5 0%, #f5e942 100%);
+      transform: translateY(-3px);
+      color: #fff;
+    }
+
+    .predict-button:active {
+      transform: translateY(1px);
+      transition: all 0.1s ease;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        margin: 20px;
+        padding: 30px 25px;
+      }
+
+      h2 {
+        font-size: 28px;
+      }
+
+      label {
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+
+      input, select {
+        height: 52px;
+        padding: 14px 18px;
+        font-size: 15px;
+      }
+    }
+
+    /* Success/Error states for future use */
+    .form-group.success input,
+    .form-group.success select {
+      border-color: #42a5f5;
+      box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.2);
+    }
+
+    .form-group.error input,
+    .form-group.error select {
+      border-color: #ff6b6b;
+      box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.2);
+    }
+
+    /* Loading state for button */
+    .predict-button.loading {
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .predict-button.loading::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      margin: auto;
+      border: 3px solid transparent;
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-background"></div>
+  <div class="particle particle-1"></div>
+  <div class="particle particle-2"></div>
+  <div class="particle particle-3"></div>
+
+  <div class="container">
+    <h2>Customer Churn Prediction</h2>
+    <form method="POST">
+
+      <div class="form-group">
+        <label for="gender">Gender</label>
+        <select name="gender" id="gender" required>
+          <option value="1">Male</option>
+          <option value="0">Female</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" name="age" id="age" min="0" placeholder="Enter age" required>
+      </div>
+
+      <div class="form-group">
+        <label for="tenure">Tenure (months)</label>
+        <input type="number" name="tenure" id="tenure" min="0" placeholder="Number of months">
+      </div>
+
+      <div class="form-group">
+        <label for="monthlyCharges">Monthly Charges</label>
+        <input type="number" name="monthlyCharges" id="monthlyCharges" step="any" placeholder="Monthly charges ($)">
+      </div>
+
+      <div class="form-group">
+        <label for="totalCharges">Total Charges</label>
+        <input type="number" name="totalCharges" id="totalCharges" step="any" placeholder="Total charges ($)">
+      </div>
+
+      <div class="form-group">
+        <label for="paymentMethod">Payment Method</label>
+        <select name="paymentMethod" id="paymentMethod">
+          <option value="0">Bank Transfer</option>
+          <option value="1">Credit Card</option>
+          <option value="2">Debit Card</option>
+          <option value="3">PayPal</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="contractType">Contract Type</label>
+        <select name="contractType" id="contractType">
+          <option value="0">Month-to-month</option>
+          <option value="1">One-year</option>
+          <option value="2">Two-year</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="internetService">Internet Service</label>
+        <select name="internetService" id="internetService">
+          <option value="1">Fiber Optic</option>
+          <option value="0">DSL</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="streamingServices">Streaming Services</label>
+        <select name="streamingServices" id="streamingServices">
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="techSupport">Tech Support</label>
+        <select name="techSupport" id="techSupport">
+          <option value="1">Yes</option>
+          <option value="0">No</option>
+        </select>
+      </div>
+
+      <button type="submit" class="predict-button">Predict Churn</button>
+    </form>
+  </div>
+
+  <script>
+    // Add some interactive effects
+    document.addEventListener('DOMContentLoaded', function() {
+      const button = document.querySelector('.predict-button');
+      const form = document.querySelector('form');
+
+      // Add loading state on form submission
+      form.addEventListener('submit', function() {
+        button.classList.add('loading');
+        button.textContent = 'Processing...';
+      });
+
+      // Add focus effects to form groups
+      const inputs = document.querySelectorAll('input, select');
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.classList.add('focused');
+        });
+
+        input.addEventListener('blur', function() {
+          this.parentElement.classList.remove('focused');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
